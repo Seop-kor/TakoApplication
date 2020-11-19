@@ -44,7 +44,7 @@ public class MemberService {
     }
 
     public void addressadd(MemberDTO memberDTO){
-        repository.saveByToken(memberDTO.getAddress(), memberDTO.getToken());
+        repository.saveByToken(memberDTO.getAddress(), memberDTO.getLat(), memberDTO.getLon(), memberDTO.getToken());
     }
 
 
@@ -53,10 +53,14 @@ public class MemberService {
     }
 
     public List<MemberEntity> findByAll() {
-        return repository.findAll();
+        return repository.findAllByLatNotNullAndLonNotNullAndAddressNotNull();
     }
 
     public void deleteByToken(String token){
         repository.deleteByToken(token);
+    }
+
+    public void tokenUpdateByUserid(MemberDTO memberDTO, String token){
+        repository.tokenUpdateByUserid(token, memberDTO.getUserid());
     }
 }

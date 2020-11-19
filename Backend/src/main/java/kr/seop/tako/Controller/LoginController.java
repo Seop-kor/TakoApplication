@@ -31,6 +31,7 @@ public class LoginController {
                 authenticate(memberDTO.getUserid(), memberDTO.getUserpass());
                 final UserDetails userDetails = userDetailsService.loadUserByUsername(memberDTO.getUserid());
                 final String token = jwtTokenUtil.generateToken(userDetails);
+                memberService.tokenUpdateByUserid(memberDTO, token);
                 return token;
             }
             else
