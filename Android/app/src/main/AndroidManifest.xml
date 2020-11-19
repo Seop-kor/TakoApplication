@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="kr.seop.tako">
+    package="kr.seop.moditako">
 
     <permission
         android:name="kr.seop.tako.permission.MAPS_RECEIVE"
@@ -26,13 +26,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".SignupActivity"></activity>
+        <activity android:name=".ManualAddressActivity"
+            android:theme="@style/popupTheme"
+            android:screenOrientation="unspecified"></activity>
+        <activity
+            android:name=".SellerSelectActivity"
+            android:screenOrientation="unspecified"
+            android:theme="@style/popupTheme" />
+        <activity android:name=".SignupActivity" />
         <activity android:name=".BuyerActivity" />
-
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCNB0kStNAv9Hg1f9UfVrbhBpDUGhNVZU8" />
-
         <activity android:name=".SellerActivity" />
         <activity android:name=".SelectActivity" />
         <activity android:name=".MainActivity">
@@ -42,6 +44,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAr3bMPIf56SeBzcsLAhQC-jE5yt3MsQ6A" />
     </application>
 
 </manifest>

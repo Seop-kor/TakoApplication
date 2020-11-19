@@ -1,4 +1,4 @@
-package kr.seop.tako;
+package kr.seop.moditako;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -6,6 +6,7 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.CookieManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -70,11 +71,17 @@ public class SelectActivity extends AppCompatActivity {
                 ,new Response.Listener<String>(){
                     @Override
                     public void onResponse(String response) {
-                        if (response.equals("true")){
+                        if (response.equals("null")){
+                            Toast.makeText(SelectActivity.this, "아이디나 비밀번호가 맞지않습니다.", Toast.LENGTH_LONG).show();
+                        }else{
+                            if(!response.equals("true")) {
+                                CookieManager cookieManager = CookieManager.getInstance();
+                                cookieManager.setAcceptCookie(true);
+                                cookieManager.setCookie("token", response);
+                            }
                             Intent it = new Intent(SelectActivity.this, SellerActivity.class);
                             startActivity(it);
-                        }else{
-                            Toast.makeText(SelectActivity.this, "아이디나 비밀번호가 맞지않습니다.", Toast.LENGTH_LONG).show();
+                            finish();
                         }
                     }
                 }

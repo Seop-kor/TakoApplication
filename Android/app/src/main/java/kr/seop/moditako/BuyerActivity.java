@@ -1,4 +1,4 @@
-package kr.seop.tako;
+package kr.seop.moditako;
 
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -162,7 +162,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
                 Lon = location.getLongitude();
 
                 String markerTitle = getCurrentAddress(currentPosition);
-                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+String.valueOf(location.getLongitude());
+                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+ String.valueOf(location.getLongitude());
                 Log.d("위도경도", marketSnippet);
 
                 setCurrentLocation(location, markerTitle, marketSnippet);

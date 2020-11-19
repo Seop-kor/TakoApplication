@@ -1,4 +1,4 @@
-package kr.seop.tako;
+package kr.seop.moditako;
 
 import org.junit.Test;
 

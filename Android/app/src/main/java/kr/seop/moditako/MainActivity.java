@@ -1,4 +1,4 @@
-package kr.seop.tako;
+package kr.seop.moditako;
 
 import android.content.Intent;
 import android.os.Bundle;

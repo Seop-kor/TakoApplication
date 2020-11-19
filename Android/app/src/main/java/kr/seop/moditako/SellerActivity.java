@@ -1,4 +1,4 @@
-package kr.seop.tako;
+package kr.seop.moditako;
 
 import android.Manifest;
 import android.content.DialogInterface;
@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -22,6 +24,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -33,21 +42,22 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class SellerActivity extends AppCompatActivity implements OnMapReadyCallback, ActivityCompat.OnRequestPermissionsResultCallback {
     private GoogleMap gMap;
     private Marker cmarker = null;
 
-    double Lon, Lat;
+    double Lat, Lon;
 
     private static final int GPS_ENABLE_REQUEST_CODE = 2001;
     private static final int UPDATE_INTERVAL_MS = 1000;  // 1초
@@ -70,6 +80,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
     private String[] REQUIRED_PERMISSIONS  = {android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION};
 
     private Button bt_start, bt_end;
+    private CookieManager cookieManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +91,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
 
         bt_start = findViewById(R.id.bt_start);
         bt_end = findViewById(R.id.bt_end);
+        cookieManager = CookieManager.getInstance();
 
         locationRequest = new LocationRequest()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
@@ -99,7 +111,47 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
         bt_start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Intent it = new Intent(SellerActivity.this, SellerSelectActivity.class);
+                startActivityForResult(it, 1);
+            }
+        });
 
+        bt_end.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //토큰 지워지기전에 주소와 lat lon 삭제
+                StringRequest stringRequest = new StringRequest(Request.Method.POST
+                        , "http://172.30.1.42:8080/del_address"
+                        , new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
+                            @Override
+                            public void onReceiveValue(Boolean aBoolean) {
+                                if(aBoolean)
+                                    finish();
+                                else
+                                    Toast.makeText(SellerActivity.this, "다시 종료 해주세요.", Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                }
+                        , new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e("Error", error.getMessage());
+                    }
+                }){
+                    @Override
+                    protected Map<String, String> getParams() throws AuthFailureError {
+                        Map<String, String> map = new HashMap<>();
+                        map.put("token", cookieManager.getCookie("token"));
+                        return map;
+                    }
+                };
+
+                RequestQueue queue = Volley.newRequestQueue(SellerActivity.this);
+                queue.add(stringRequest);
             }
         });
     }
@@ -107,7 +159,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
     @Override
     public void onMapReady(GoogleMap googleMap) {
         this.gMap = googleMap;
-        setDefaultLocation();
+        setMyLocation(); //내 위치 설정
 
         //런타임 퍼미션 처리
         // 1. 위치 퍼미션
@@ -133,6 +185,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
             }
         }
 
+        gMap.getUiSettings().setZoomControlsEnabled(true);
         gMap.getUiSettings().setMyLocationButtonEnabled(true);
         gMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
@@ -154,15 +207,14 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
 
                 currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
 
-
                 Lat = location.getLatitude();
                 Lon = location.getLongitude();
 
                 String markerTitle = getCurrentAddress(currentPosition);
-                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+String.valueOf(location.getLongitude());
+                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+ String.valueOf(location.getLongitude());
                 Log.d("위도경도", marketSnippet);
 
-                setCurrentLocation(location, markerTitle, marketSnippet);
+                setLocation(location, markerTitle, marketSnippet);
 
                 mCurrentLocatiion = location;
             }
@@ -202,7 +254,6 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
         Log.d("onStart", "onStart");
 
         if (checkPermission()) {
-
             Log.d("onStart", "onStart : call mFusedLocationClient.requestLocationUpdates");
             mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
 
@@ -256,45 +307,31 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    public void setCurrentLocation(Location location, String markerTitle, String markerSnippet){
+    public void setLocation(Location location, String markerTitle, String markerSnippet){
         if(cmarker != null){
             cmarker.remove();
         }
 
-        LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        //http통신으로
+        LatLng targetLocationLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 
         MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(currentLatLng);
+        markerOptions.position(targetLocationLatLng);
         markerOptions.title(markerTitle);
         markerOptions.snippet(markerSnippet);
-        markerOptions.draggable(true);
 
         cmarker = gMap.addMarker(markerOptions);
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(currentLatLng);
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(targetLocationLatLng);
         gMap.moveCamera(cameraUpdate);
     }
 
-    public void setDefaultLocation() {
+    public void setMyLocation() {
 
 
-        //디폴트 위치, Seoul
-        LatLng DEFAULT_LOCATION = new LatLng(Lon, Lat);
-        String markerTitle = "위치정보 가져올 수 없음";
-        String markerSnippet = "위치 퍼미션과 GPS 활성 요부 확인하세요";
+        //디폴트 위치, 내 위치
+        LatLng MY_LOCATION = new LatLng(Lat, Lon);
 
-
-        if (cmarker != null)
-            cmarker.remove();
-
-        MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(DEFAULT_LOCATION);
-        markerOptions.title(markerTitle);
-        markerOptions.snippet(markerSnippet);
-        markerOptions.draggable(true);
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-        cmarker = gMap.addMarker(markerOptions);
-
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, 15);
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(MY_LOCATION, 15);
         gMap.moveCamera(cameraUpdate);
 
     }
@@ -407,7 +444,6 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
         switch (requestCode) {
 
             case GPS_ENABLE_REQUEST_CODE:
-
                 //사용자가 GPS 활성 시켰는지 검사
                 if (checkLocationServicesStatus()) {
                     if (checkLocationServicesStatus()) {
@@ -420,8 +456,114 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
                         return;
                     }
                 }
-
                 break;
+
+            case 1:
+                if(resultCode == 1){
+                    StringRequest stringRequest = new StringRequest(Request.Method.POST
+                            , "http://172.30.1.42:8080/address"
+                            , new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+
+                        }
+                    }
+                            , new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Log.e("Error", error.getMessage());
+                        }
+                    }){
+                        @Override
+                        protected Map<String, String> getParams() throws AuthFailureError {
+                            final Geocoder geocoder = new Geocoder(SellerActivity.this);
+                            List<Address> list = null;
+                            Map<String, String> map = new HashMap<>();
+
+                            String address = new String();
+                            try{
+                                list = geocoder.getFromLocation(Lat, Lon, 10);
+                            }catch (IOException e){
+                                Log.e("Error", e.getMessage());
+                            }
+                            if(list != null){
+                                if(list.size() == 0){
+                                    Log.d("Warning", "결과없음");
+                                }else{
+                                    address = list.get(0).getAddressLine(0);
+                                    Log.i("address", address);
+                                }
+                            }
+                            map.put("token", cookieManager.getCookie("token"));
+                            map.put("lat",  String.valueOf(Lat));
+                            map.put("lon", String.valueOf(Lon));
+                            map.put("address", address);
+                            //여기요여기
+                            return map;
+                        }
+                    };
+
+                    RequestQueue queue = Volley.newRequestQueue(SellerActivity.this);
+                    queue.add(stringRequest);
+                }
+                if(resultCode == 2){
+                    Intent it = new Intent(SellerActivity.this, ManualAddressActivity.class);
+                    startActivityForResult(it, 2);
+                }
+                break;
+
+            case 2:
+                if(resultCode == 3){
+                    StringRequest stringRequest = new StringRequest(Request.Method.POST
+                            , "http://172.30.1.42:8080/address"
+                            , new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+
+                        }
+                    }
+                            , new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Log.e("Error", error.getMessage());
+                        }
+                    }){
+                        @Override
+                        protected Map<String, String> getParams() throws AuthFailureError {
+                            final Geocoder geocoder = new Geocoder(SellerActivity.this);
+                            String addressdd = data.getStringExtra("address");
+                            List<Address> list = null;
+                            Map<String, String> map = new HashMap<>();
+                            double lat = 0;
+                            double lon = 0;
+
+                            try{
+                                list = geocoder.getFromLocationName(addressdd, 10);
+                            }catch (IOException e){
+                                Log.e("Error", e.getMessage());
+                            }
+                            if(list != null){
+                                if(list.size() == 0){
+                                    Log.d("Warning", "결과없음");
+                                }else{
+                                    lat = list.get(0).getLatitude();
+                                    lon = list.get(0).getLongitude();
+                                }
+                            }
+                            map.put("token", cookieManager.getCookie("token"));
+                            map.put("lat",  String.valueOf(lat));
+                            map.put("lon", String.valueOf(lon));
+                            map.put("address", addressdd);
+                            //여기요여기
+                            return map;
+                        }
+                    };
+
+                    RequestQueue queue = Volley.newRequestQueue(SellerActivity.this);
+                    queue.add(stringRequest);
+                }
+                break;
+
         }
     }
 }
