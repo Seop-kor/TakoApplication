@@ -8,7 +8,9 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -22,6 +24,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -33,23 +41,26 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.snackbar.Snackbar;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallback, ActivityCompat.OnRequestPermissionsResultCallback{
 
     private ImageButton bt_reset, bt_search;
     private EditText et_searchtxt;
 
+    private Handler handler;
+
     private GoogleMap gMap;
-    private Marker cmarker = null;
 
     double Lon, Lat;
 
@@ -61,15 +72,12 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
 
     private View mLayout;
 
-    private Location mCurrentLocatiion;
-    private LatLng currentPosition;
 
     //    private MarkerOptions makerOptions;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private Location location;
 
-    private boolean needRequest = false;
 
     private String[] REQUIRED_PERMISSIONS  = {android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION};
 
@@ -77,6 +85,19 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_buyer);
+
+        handler = new Handler(){
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+                gMap.clear();
+                Bundle bundle = msg.getData();
+                ArrayList<MarkerOptions> list = bundle.getParcelableArrayList("value");
+                for(int i = 0; i < list.size(); i++){
+                    gMap.addMarker(list.get(i));
+                }
+            }
+        };
 
         mLayout = findViewById(R.id.ll_buyermain);
 
@@ -101,8 +122,83 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
         bt_search.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String text = et_searchtxt.getText().toString();
-                //마커 받아오기.
+                if(et_searchtxt.getText() != null){
+                    String text = et_searchtxt.getText().toString();
+                    final Geocoder geocoder = new Geocoder(BuyerActivity.this);
+                    List<Address> list = null;
+
+                    try{
+                        list = geocoder.getFromLocationName(text, 10);
+                    }catch (IOException e){
+                        Log.e("Error", e.getMessage());
+                    }
+
+                    if(list != null){
+                        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
+                                , "http://13.124.88.237:8080/address/" + list.get(0).getLatitude() + "/" + list.get(0).getLongitude()
+                                , null
+                                , new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject jsonObject = response.getJSONObject("result");
+                                    JSONArray array = response.getJSONArray("data");
+                                    if (Integer.valueOf(jsonObject.get("code").toString()) == 0) {
+                                        Thread thread = new Thread(new MarkerThread(array));
+                                        thread.start();
+                                    }
+                                } catch (JSONException e) {
+                                    Log.e("Error", e.getMessage());
+                                }
+                            }
+                        }
+                                , new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                Log.e("Error", error.getMessage());
+                            }
+                        });
+
+                        RequestQueue queue = Volley.newRequestQueue(BuyerActivity.this);
+                        queue.add(jsonObjectRequest);
+                    }
+                }else{
+                    Toast.makeText(BuyerActivity.this, "주소를 입력해주세요.", Toast.LENGTH_LONG);
+                }
+            }
+        });
+
+        bt_reset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                et_searchtxt.getText().clear();
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
+                        , "http://13.124.88.237:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
+                        , null
+                        , new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try{
+                            JSONObject jsonObject = response.getJSONObject("result");
+                            JSONArray array = response.getJSONArray("data");
+                            if(Integer.valueOf(jsonObject.get("code").toString()) == 0){
+                                Thread thread = new Thread(new MarkerThread(array));
+                                thread.start();
+                            }
+                        }catch (JSONException e){
+                            Log.e("Error", e.getMessage());
+                        }
+                    }
+                }
+                        , new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e("Error", error.getMessage());
+                    }
+                });
+
+                RequestQueue queue = Volley.newRequestQueue(BuyerActivity.this);
+                queue.add(jsonObjectRequest);
             }
         });
     }
@@ -110,7 +206,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
     @Override
     public void onMapReady(GoogleMap googleMap) {
         this.gMap = googleMap;
-        setDefaultLocation();
+        setMyLocation();
 
         //런타임 퍼미션 처리
         // 1. 위치 퍼미션
@@ -136,6 +232,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
             }
         }
 
+        gMap.getUiSettings().setZoomControlsEnabled(true);
         gMap.getUiSettings().setMyLocationButtonEnabled(true);
         gMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
@@ -155,19 +252,42 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
             if(locationList.size() > 0){
                 location = locationList.get(locationList.size() - 1);
 
-                currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
+                        , "http://13.124.88.237:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
+                        , null
+                        , new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try{
+                            JSONObject jsonObject = response.getJSONObject("result");
+                            JSONArray array = response.getJSONArray("data");
+                            if(Integer.valueOf(jsonObject.get("code").toString()) == 0){
+                                Thread thread = new Thread(new MarkerThread(array));
+                                thread.start();
+                            }
+                        }catch (JSONException e){
+                            Log.e("Error", e.getMessage());
+                        }
+                    }
+                }
+                        , new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e("Error", error.getLocalizedMessage());
+                    }
+                });
 
+                RequestQueue queue = Volley.newRequestQueue(BuyerActivity.this);
+                queue.add(jsonObjectRequest);
+
+                LatLng currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
 
                 Lat = location.getLatitude();
                 Lon = location.getLongitude();
 
-                String markerTitle = getCurrentAddress(currentPosition);
-                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+ String.valueOf(location.getLongitude());
-                Log.d("위도경도", marketSnippet);
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(currentPosition);
+                gMap.moveCamera(cameraUpdate);
 
-                setCurrentLocation(location, markerTitle, marketSnippet);
-
-                mCurrentLocatiion = location;
             }
         }
     };
@@ -225,33 +345,6 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
         }
     }
 
-    public String getCurrentAddress(LatLng latLng){
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-
-        List<Address> addresses;
-        try {
-            addresses = geocoder.getFromLocation(
-                    latLng.latitude,
-                    latLng.longitude,
-                    1
-            );
-        }catch (IOException e){
-            Toast.makeText(this,"지오코더 서비스 사용불가", Toast.LENGTH_LONG).show();
-            return "지오코더 서비스 사용불가";
-        } catch (IllegalArgumentException ille){
-            Toast.makeText(this,"잘못된 GPS 좌표", Toast.LENGTH_LONG).show();
-            return "잘못된 GPS 좌표";
-        }
-
-        if(addresses == null || addresses.size() == 0){
-            Toast.makeText(this, "주소 미발견", Toast.LENGTH_LONG).show();
-            return "주소 미발견";
-        }else{
-            Address address = addresses.get(0);
-            return address.getAddressLine(0).toString();
-        }
-    }
-
     public boolean checkLocationServicesStatus() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -259,43 +352,9 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    public void setCurrentLocation(Location location, String markerTitle, String markerSnippet){
-        if(cmarker != null){
-            cmarker.remove();
-        }
-
-        LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-
-        MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(currentLatLng);
-        markerOptions.title(markerTitle);
-        markerOptions.snippet(markerSnippet);
-        markerOptions.draggable(true);
-
-        cmarker = gMap.addMarker(markerOptions);
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(currentLatLng);
-        gMap.moveCamera(cameraUpdate);
-    }
-
-    public void setDefaultLocation() {
-
-
-        //디폴트 위치, Seoul
+    public void setMyLocation() {
+        //디폴트 위치, 내 위치
         LatLng DEFAULT_LOCATION = new LatLng(Lon, Lat);
-        String markerTitle = "위치정보 가져올 수 없음";
-        String markerSnippet = "위치 퍼미션과 GPS 활성 요부 확인하세요";
-
-
-        if (cmarker != null)
-            cmarker.remove();
-
-        MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(DEFAULT_LOCATION);
-        markerOptions.title(markerTitle);
-        markerOptions.snippet(markerSnippet);
-        markerOptions.draggable(true);
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-        cmarker = gMap.addMarker(markerOptions);
 
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, 15);
         gMap.moveCamera(cameraUpdate);
@@ -421,8 +480,6 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
                         Log.d("onActivityResult", "onActivityResult : GPS 활성화 되있음");
 
 
-                        needRequest = true;
-
                         return;
                     }
                 }
@@ -430,4 +487,40 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
                 break;
         }
     }
+
+    private class MarkerThread implements Runnable{
+        private JSONArray array;
+
+        public MarkerThread(JSONArray jsonArray){
+            this.array = jsonArray;
+        }
+
+        @Override
+        public void run() {
+            ArrayList<MarkerOptions> list = new ArrayList<>();
+            try{
+                for(int i = 0; i < array.length(); i++){
+                    JSONObject jsonObject = array.getJSONObject(i);
+                    double lat = Double.valueOf(jsonObject.get("lat").toString());
+                    double lon = Double.valueOf(jsonObject.get("lon").toString());
+                    String address = jsonObject.get("address").toString();
+                    String phone = jsonObject.get("phone").toString();
+                    LatLng latLng = new LatLng(lat, lon);
+                    MarkerOptions markerOptions = new MarkerOptions();
+                    markerOptions.position(latLng);
+                    markerOptions.title("주소 : "+address + "\n 핸드폰 번호 : "+phone);
+                    list.add(markerOptions);
+                }
+            }catch (JSONException e){
+                Log.e("Error", e.getMessage());
+            }
+            Bundle bundle = new Bundle();
+            bundle.putParcelableArrayList("value", list);
+            Message message = handler.obtainMessage();
+            message.setData(bundle);
+            handler.sendMessage(message);
+            //근데 handler음... 안될듯..?
+        }
+    }
+
 }

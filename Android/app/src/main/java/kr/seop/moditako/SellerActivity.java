@@ -43,19 +43,15 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class SellerActivity extends AppCompatActivity implements OnMapReadyCallback, ActivityCompat.OnRequestPermissionsResultCallback {
     private GoogleMap gMap;
-    private Marker cmarker = null;
 
     double Lat, Lon;
 
@@ -67,15 +63,11 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
 
     private View mLayout;
 
-    private Location mCurrentLocatiion;
-    private LatLng currentPosition;
-
 //    private MarkerOptions makerOptions;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private Location location;
 
-    private boolean needRequest = false;
 
     private String[] REQUIRED_PERMISSIONS  = {android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION};
 
@@ -205,18 +197,13 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
             if(locationList.size() > 0){
                 location = locationList.get(locationList.size() - 1);
 
-                currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
 
                 Lat = location.getLatitude();
                 Lon = location.getLongitude();
 
-                String markerTitle = getCurrentAddress(currentPosition);
-                String marketSnippet = "위도 : " + String.valueOf(location.getLatitude()) + " 경도 : "+ String.valueOf(location.getLongitude());
-                Log.d("위도경도", marketSnippet);
-
-                setLocation(location, markerTitle, marketSnippet);
-
-                mCurrentLocatiion = location;
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(latLng);
+                gMap.moveCamera(cameraUpdate);
             }
         }
     };
@@ -273,32 +260,6 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
         }
     }
 
-    public String getCurrentAddress(LatLng latLng){
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-
-        List<Address> addresses;
-        try {
-            addresses = geocoder.getFromLocation(
-                    latLng.latitude,
-                    latLng.longitude,
-                    1
-            );
-        }catch (IOException e){
-            Toast.makeText(this,"지오코더 서비스 사용불가", Toast.LENGTH_LONG).show();
-            return "지오코더 서비스 사용불가";
-        } catch (IllegalArgumentException ille){
-            Toast.makeText(this,"잘못된 GPS 좌표", Toast.LENGTH_LONG).show();
-            return "잘못된 GPS 좌표";
-        }
-
-        if(addresses == null || addresses.size() == 0){
-            Toast.makeText(this, "주소 미발견", Toast.LENGTH_LONG).show();
-            return "주소 미발견";
-        }else{
-            Address address = addresses.get(0);
-            return address.getAddressLine(0).toString();
-        }
-    }
 
     public boolean checkLocationServicesStatus() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -307,31 +268,12 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    public void setLocation(Location location, String markerTitle, String markerSnippet){
-        if(cmarker != null){
-            cmarker.remove();
-        }
-
-        //http통신으로
-        LatLng targetLocationLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-
-        MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(targetLocationLatLng);
-        markerOptions.title(markerTitle);
-        markerOptions.snippet(markerSnippet);
-
-        cmarker = gMap.addMarker(markerOptions);
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(targetLocationLatLng);
-        gMap.moveCamera(cameraUpdate);
-    }
-
     public void setMyLocation() {
-
 
         //디폴트 위치, 내 위치
         LatLng MY_LOCATION = new LatLng(Lat, Lon);
 
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(MY_LOCATION, 15);
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(MY_LOCATION, 20);
         gMap.moveCamera(cameraUpdate);
 
     }
@@ -449,9 +391,6 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
                     if (checkLocationServicesStatus()) {
 
                         Log.d("onActivityResult", "onActivityResult : GPS 활성화 되있음");
-
-
-                        needRequest = true;
 
                         return;
                     }
