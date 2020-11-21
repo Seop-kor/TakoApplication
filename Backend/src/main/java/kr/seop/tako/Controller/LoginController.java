@@ -13,11 +13,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
+
 
 @RestController
 @AllArgsConstructor
 @CrossOrigin
-@Log
 public class LoginController {
     private AuthenticationManager authenticationManager;
     private JwtTokenUtil jwtTokenUtil;
@@ -26,6 +27,9 @@ public class LoginController {
 
     @PostMapping("/login")
     public String login(MemberDTO memberDTO) throws Exception{
+
+        //1. 우선 토큰이 만료되었는지 확인 - > 토큰
+
         if(memberDTO.getToken() == null){
             if(memberService.findByUserid(memberDTO)) {
                 authenticate(memberDTO.getUserid(), memberDTO.getUserpass());
@@ -37,8 +41,13 @@ public class LoginController {
             else
                 return "null";
         }else{
-            if(memberService.countByToken(memberDTO)){
-                return "true";
+            if(jwtTokenUtil.getExpirationDateFromToken(memberDTO.getToken()).before(new Date())){
+                int stat = memberService.countByUserid(jwtTokenUtil.getUsernameFromToken(memberDTO.getToken()));
+                if(stat > 0){
+                    return "true";
+                }else{
+                    return "null";
+                }
             }else{
                 return "null";
             }

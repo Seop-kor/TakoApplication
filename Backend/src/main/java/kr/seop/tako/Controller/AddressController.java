@@ -4,7 +4,6 @@ import kr.seop.tako.DTO.MemberDTO;
 import kr.seop.tako.Entity.MemberEntity;
 import kr.seop.tako.Service.MemberService;
 import lombok.AllArgsConstructor;
-import lombok.extern.java.Log;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;

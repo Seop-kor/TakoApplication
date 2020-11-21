@@ -30,14 +30,6 @@ public class MemberService {
         }
     }
 
-    public boolean countByToken(MemberDTO memberDTO) {
-        if (repository.countByToken(memberDTO.getToken()) > 0) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     public void save(MemberDTO memberDTO) {
         memberDTO.setUserpass(encoder.encode(memberDTO.getUserpass()));
         repository.save(memberDTO.toEntity());
