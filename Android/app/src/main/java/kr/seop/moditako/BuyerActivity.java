@@ -135,7 +135,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
 
                     if(list != null){
                         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
-                                , "http://13.124.88.237:8080/address/" + list.get(0).getLatitude() + "/" + list.get(0).getLongitude()
+                                , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/address/" + list.get(0).getLatitude() + "/" + list.get(0).getLongitude()
                                 , null
                                 , new Response.Listener<JSONObject>() {
                             @Override
@@ -173,7 +173,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
             public void onClick(View view) {
                 et_searchtxt.getText().clear();
                 JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
-                        , "http://13.124.88.237:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
+                        , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
                         , null
                         , new Response.Listener<JSONObject>() {
                     @Override
@@ -253,7 +253,7 @@ public class BuyerActivity extends AppCompatActivity implements OnMapReadyCallba
                 location = locationList.get(locationList.size() - 1);
 
                 JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET
-                        , "http://13.124.88.237:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
+                        , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/address/" + location.getLatitude() + "/" + location.getLongitude()
                         , null
                         , new Response.Listener<JSONObject>() {
                     @Override

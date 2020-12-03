@@ -113,7 +113,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
             public void onClick(View view) {
                 //토큰 지워지기전에 주소와 lat lon 삭제
                 StringRequest stringRequest = new StringRequest(Request.Method.POST
-                        , "http://172.30.1.42:8080/del_address"
+                        , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/del_address"
                         , new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -400,7 +400,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
             case 1:
                 if(resultCode == 1){
                     StringRequest stringRequest = new StringRequest(Request.Method.POST
-                            , "http://172.30.1.42:8080/address"
+                            , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/address"
                             , new Response.Listener<String>() {
                         @Override
                         public void onResponse(String response) {
@@ -454,7 +454,7 @@ public class SellerActivity extends AppCompatActivity implements OnMapReadyCallb
             case 2:
                 if(resultCode == 3){
                     StringRequest stringRequest = new StringRequest(Request.Method.POST
-                            , "http://172.30.1.42:8080/address"
+                            , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/address"
                             , new Response.Listener<String>() {
                         @Override
                         public void onResponse(String response) {

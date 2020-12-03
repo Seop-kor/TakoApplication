@@ -74,7 +74,7 @@ public class SignupActivity extends AppCompatActivity {
             public void afterTextChanged(Editable editable) {
                 //http통신
                 StringRequest stringRequest = new StringRequest(Request.Method.GET
-                        , "http://172.30.1.42:8080/idcheck/" + editable.toString()
+                        , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/idcheck/" + editable.toString()
                         , new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -130,7 +130,7 @@ public class SignupActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 StringRequest request = new StringRequest(Request.Method.POST
-                        , "http://172.30.1.42:8080/register"
+                        , "http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/register"
                         , new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {

@@ -67,7 +67,7 @@ public class SelectActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 StringRequest stringRequest = new StringRequest(Request.Method.POST
-                ,"http://172.30.1.42:8080/login"
+                ,"http://ec2-3-34-82-80.ap-northeast-2.compute.amazonaws.com:8080/login"
                 ,new Response.Listener<String>(){
                     @Override
                     public void onResponse(String response) {
